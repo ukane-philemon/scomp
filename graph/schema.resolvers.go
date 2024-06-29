@@ -11,44 +11,19 @@ import (
 	"github.com/ukane-philemon/scomp/graph/model"
 )
 
-// ComputeClassGrade is the resolver for the computeClassGrade field.
-func (r *mutationResolver) ComputeClassGrade(ctx context.Context, input model.NewClass) (*model.ClassReport, error) {
-	return &model.ClassReport{
-		HighestStudentScore:             771,
-		HighestStudentScoreAsPercentage: 70.1,
-		LowestStudentScore:              121,
-		LowestStudentScoreAsPercentage:  12.2,
-		StudentsReport: []*model.StudentReport{
-			{
-				ClassPosition: 1,
-				ClassGrade:    "",
-				SubjectReport: []*model.StudentSubjectReport{
-					{
-						Name:     "Physics",
-						Score:    50,
-						Grade:    "A",
-						Position: 1,
-					},
-				},
-				TotalScore:           771,
-				TotalScorePercentage: 70.5,
-			},
-			{
-				ClassPosition: 2,
-				ClassGrade:    "A",
-				SubjectReport: []*model.StudentSubjectReport{
-					{
-						Name:     "Physics",
-						Score:    50,
-						Grade:    "A",
-						Position: 1,
-					},
-				},
-				TotalScore:           770,
-				TotalScorePercentage: 70.2,
-			},
-		},
-	}, nil
+// CreateClass is the resolver for the createClass field.
+func (r *mutationResolver) CreateClass(ctx context.Context, class model.NewClass) (string, error) {
+	panic(fmt.Errorf("not implemented: CreateClass - createClass"))
+}
+
+// AddStudentRecord is the resolver for the addStudentRecord field.
+func (r *mutationResolver) AddStudentRecord(ctx context.Context, classID string, name string, subjectsScore []*model.StudentSubjectScore) (string, error) {
+	panic(fmt.Errorf("not implemented: AddStudentRecord - addStudentRecord"))
+}
+
+// ComputeClassReport is the resolver for the computeClassReport field.
+func (r *mutationResolver) ComputeClassReport(ctx context.Context, classID string) (*model.ClassReport, error) {
+	panic(fmt.Errorf("not implemented: ComputeClassReport - computeClassReport"))
 }
 
 // ClassReport is the resolver for the classReport field.
@@ -124,6 +99,47 @@ type queryResolver struct{ *Resolver }
 //   - When renaming or deleting a resolver the old code will be put in here. You can safely delete
 //     it when you're done.
 //   - You have helper methods in this file. Move them out to keep these resolver files clean.
-func (r *queryResolver) StudentReports(ctx context.Context) ([]*model.StudentReport, error) {
-	panic(fmt.Errorf("not implemented: StudentReports - studentReports"))
+func (r *mutationResolver) AddStudentStudentRecord(ctx context.Context, classID string, name string, subjectsScore []*model.StudentSubjectScore) (string, error) {
+	panic(fmt.Errorf("not implemented: AddStudentStudentRecord - addStudentStudentRecord"))
+}
+func (r *mutationResolver) DeleteStudentRecord(ctx context.Context, classID string, studentID string) (*model.StudentRecord, error) {
+	panic(fmt.Errorf("not implemented: DeleteStudentRecord - deleteStudentRecord"))
+}
+func (r *mutationResolver) ComputeClassGrade(ctx context.Context, input model.NewClass) (*model.ClassReport, error) {
+	return &model.ClassReport{
+		HighestStudentScore:             771,
+		HighestStudentScoreAsPercentage: 70.1,
+		LowestStudentScore:              121,
+		LowestStudentScoreAsPercentage:  12.2,
+		StudentsReport: []*model.StudentReport{
+			{
+				ClassPosition: 1,
+				ClassGrade:    "",
+				SubjectReport: []*model.StudentSubjectReport{
+					{
+						Name:     "Physics",
+						Score:    50,
+						Grade:    "A",
+						Position: 1,
+					},
+				},
+				TotalScore:           771,
+				TotalScorePercentage: 70.5,
+			},
+			{
+				ClassPosition: 2,
+				ClassGrade:    "A",
+				SubjectReport: []*model.StudentSubjectReport{
+					{
+						Name:     "Physics",
+						Score:    50,
+						Grade:    "A",
+						Position: 1,
+					},
+				},
+				TotalScore:           770,
+				TotalScorePercentage: 70.2,
+			},
+		},
+	}, nil
 }

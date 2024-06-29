@@ -16,28 +16,25 @@ type Mutation struct {
 }
 
 type NewClass struct {
-	Name               string          `json:"name"`
-	ClassSubjects      []*Subject      `json:"classSubjects"`
-	ClassStudentScores []*StudentScore `json:"classStudentScores"`
+	Name          string     `json:"name"`
+	ClassSubjects []*Subject `json:"classSubjects"`
 }
 
 type Query struct {
 }
 
+type StudentRecord struct {
+	ID          string         `json:"id"`
+	Name        string         `json:"name"`
+	ClassReport *StudentReport `json:"classReport,omitempty"`
+}
+
 type StudentReport struct {
-	StudentID            string                  `json:"studentID"`
-	StudentName          string                  `json:"studentName"`
 	ClassPosition        int                     `json:"classPosition"`
 	ClassGrade           string                  `json:"classGrade"`
 	SubjectReport        []*StudentSubjectReport `json:"subjectReport"`
 	TotalScore           int                     `json:"totalScore"`
 	TotalScorePercentage float64                 `json:"totalScorePercentage"`
-}
-
-type StudentScore struct {
-	StudentID    string                 `json:"studentID"`
-	StudentName  string                 `json:"studentName"`
-	SubjectScore []*StudentSubjectScore `json:"subjectScore"`
 }
 
 type StudentSubjectReport struct {
