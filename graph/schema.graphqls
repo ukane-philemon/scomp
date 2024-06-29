@@ -1,0 +1,57 @@
+input NewClass {
+  name: String!
+  classSubjects: [Subject!]!
+  classStudentScores: [StudentScore!]!
+}
+
+input Subject {
+  name: String!
+  maxScore: Int!
+}
+
+input StudentScore {
+    studentID: String!
+    studentName: String!
+    subjectScore: [StudentSubjectScore!]!
+}
+
+input StudentSubjectScore {
+  name: String!
+  score: Int!
+}
+
+type StudentSubjectReport {
+    name: String! # subject name
+    score: Int! # subject score
+    grade: String! # grade for subject
+    position: Int! # position for subject based on subject score
+}
+
+type StudentReport {
+  studentID: String!
+  studentName: String!
+  classPosition: Int! # overall position in the class based on total score.
+  classGrade: String! # overall grade based on total score or percentage.
+  subjectReport: [StudentSubjectReport!]!  # individual report for each subject.
+  totalScore: Int! # sum of student scores across all subjects
+  totalScorePercentage: Float! # total student score as a percentage of the maximum possible score
+}
+
+type ClassReport {
+  classID: String!
+  className: String!
+  highestStudentScore: Int!
+  highestStudentScoreAsPercentage: Float!
+  lowestStudentScore: Int!
+  lowestStudentScoreAsPercentage: Float!
+  studentsReport:[StudentReport!]!
+}
+
+type Query {
+ classReport(classID: String!): ClassReport!
+ studentReport(classID: String!, studentID: String!): StudentReport!
+}
+
+type Mutation {
+  computeClassGrade(input: NewClass!): ClassReport!
+}
