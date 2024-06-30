@@ -1,18 +1,15 @@
 
 type ClassReport {
-  classID: String!
-  className: String!
   highestStudentScore: Int!
   highestStudentScoreAsPercentage: Float!
   lowestStudentScore: Int!
   lowestStudentScoreAsPercentage: Float!
-  studentsReport:[StudentReport!]!
 }
 
 type StudentRecord {
-    id: String!
-    name: String!
-    classReport: StudentReport
+  id: String!
+  name: String!
+  report: StudentReport!
 }
 
 type StudentReport {
@@ -30,33 +27,70 @@ type StudentSubjectReport {
     position: Int! # position for subject based on subject score
 }
 
-type Query {
- classReport(classID: String!): ClassReport!
- studentReport(classID: String!, studentID: String!): StudentReport!
+type ClassInfo {
+  id: String!
+	name: String!
+	subjects: [Subject!]!
+  studentsRecord: [StudentRecord!]!
+  classReport: ClassReport!
+  createdAt: String!
+  lastUpdatedAt: String!
 }
 
-input NewClass {
-  name: String!
-  classSubjects: [Subject!]!
-}
-
-input Subject {
+type Subject {
   name: String!
   maxScore: Int!
 }
 
-input StudentSubjectScore {
+type Admin {
+  id: String!
+  username: String!
+}
+
+type LoginResponse {
+  authToken: String!
+  adminInfo: Admin!
+}
+
+type Query {
+ classInfo(classID: String!): ClassInfo!
+ classes(hasReport: Boolean): [ClassInfo!]!
+ studentRecord(classID: String!, studentID: String!): StudentRecord!
+}
+
+input NewClass {
+  name: String!
+  classSubjects: [SubjectInput!]!
+}
+
+input SubjectInput {
+  name: String!
+  maxScore: Int!
+}
+
+input StudentRecordInput {
+  name: String!
+  subjectsScore: [StudentSubjectScoreInput!]!
+}
+
+input StudentSubjectScoreInput {
   name: String!
   score: Int!
 }
 
 type Mutation {
+  # createAdminAccount creates a new admin account and returns the admin's ID.
+  createAdminAccount(username: String!, password: String!): String!
+  # login validates the admin login credentials and logs an admin into their
+  # account.
+  login(username: String!, password: String!): LoginResponse!
   # createClass creates a new class entry. Reports cannot be generated until
   # student records have been added to the newly created class.
   createClass(class: NewClass!): String!
-   # addStudentRecord adds a student's record to an existing class.
-  addStudentRecord(classID: String!, name: String!, subjectsScore: [StudentSubjectScore!]!): String!
+   # addStudentRecord adds a student's record to an existing class and returns
+   # the students ID.
+  addStudentRecord(classID: String!, student: StudentRecordInput!): String!
   # computeClassReport computes the report for the class that match the provided
-  # classID.
-  computeClassReport(classID: String!): ClassReport!
+  # classID and returns the class information.
+  computeClassReport(classID: String!): ClassInfo!
 }
