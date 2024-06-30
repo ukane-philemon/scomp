@@ -27,7 +27,7 @@ const (
 	nameKey                  = "name"
 	subjectsKey              = "subjects"
 	classReportKey           = "classReport"
-	studentsSubjectRecordKey = "studentsSubjectRecord"
+	studentSubjectsRecordKey = "studentSubjectsRecord"
 	studentReportKey         = "studentReport"
 	lastUpdatedAtKey         = "lastUpdatedAt"
 

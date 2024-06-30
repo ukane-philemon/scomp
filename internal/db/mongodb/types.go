@@ -18,10 +18,10 @@ type dbClassInfo struct {
 	Subjects map[string]*model.Subject `json:"subjects"`
 	// StudentsSubjectRecord is a map of student name to their subject scores
 	// and is used to ensure non-duplicated student for this class.
-	StudentsSubjectRecord map[string][]*model.StudentSubjectScoreInput `json:"studentsSubjectRecord"`
-	ClassReport           *model.ClassReport                           `json:"classReport"`
-	CreatedAt             int64                                        `bson:"createdAt"`
-	LastUpdatedAt         int64                                        `bson:"lastUpdatedAt"`
+	StudentsSubjectRecord map[string]*model.StudentSubjectScore `json:"studentSubjectsRecord"`
+	ClassReport           *model.ClassReport                    `json:"classReport"`
+	CreatedAt             int64                                 `bson:"createdAt"`
+	LastUpdatedAt         int64                                 `bson:"lastUpdatedAt"`
 }
 
 func (ci *dbClassInfo) SubjectsToArray() []*model.Subject {
