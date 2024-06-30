@@ -79,7 +79,7 @@ input StudentSubjectScoreInput {
 }
 
 type Mutation {
-  # createAdminAccount creates a new admin account and returns the admin's ID.
+  # createAdminAccount creates a new admin account.
   createAdminAccount(username: String!, password: String!): String!
   # login validates the admin login credentials and logs an admin into their
   # account.

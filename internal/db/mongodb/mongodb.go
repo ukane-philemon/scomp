@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
+	"log"
 	"strings"
 
 	"github.com/ukane-philemon/scomp/graph"
@@ -15,8 +15,7 @@ import (
 )
 
 const (
-	scomDB = "scomp"
-
+	// Collections
 	adminCollection   = "admin"
 	classCollection   = "class"
 	studentCollection = "students"
@@ -46,17 +45,16 @@ type MongoDB struct {
 	adminCollection   *mongo.Collection
 	classCollection   *mongo.Collection
 	studentCollection *mongo.Collection
-	log               *slog.Logger
 }
 
 // New connects to a mongo database and returns a new instance of *MongoDB.
-func New(ctx context.Context, connectionURL string, logger *slog.Logger) (*MongoDB, error) {
+func New(ctx context.Context, dbName string, connectionURL string) (*MongoDB, error) {
 	if connectionURL == "" {
 		return nil, errors.New("missing mongodb database connection URL")
 	}
 
-	if logger == nil {
-		return nil, errors.New("mongodb logger is required")
+	if dbName == "" {
+		return nil, errors.New("database name is required")
 	}
 
 	// Set server API version for the client.
@@ -72,9 +70,9 @@ func New(ctx context.Context, connectionURL string, logger *slog.Logger) (*Mongo
 		return nil, fmt.Errorf("client.Ping error: %w", err)
 	}
 
-	logger.Info("Database has been connected and pinged successfully...")
+	log.Println("Database has been connected and pinged successfully...")
 
-	db := client.Database(scomDB)
+	db := client.Database(dbName)
 
 	// Create a unique index on the admin collection.
 	adminCollection := db.Collection(adminCollection)
@@ -102,7 +100,6 @@ func New(ctx context.Context, connectionURL string, logger *slog.Logger) (*Mongo
 		adminCollection:   adminCollection,
 		classCollection:   classCollection,
 		studentCollection: db.Collection(studentCollection),
-		log:               logger,
 	}, nil
 }
 
@@ -114,7 +111,7 @@ func (mdb *MongoDB) Shutdown(ctx context.Context) error {
 		return fmt.Errorf("client.Disconnect error: %w", err)
 	}
 
-	mdb.log.Info("Database has been shutdown successfully...")
+	log.Println("Database has been shutdown successfully...")
 
 	return nil
 }

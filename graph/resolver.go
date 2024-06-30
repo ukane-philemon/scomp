@@ -1,7 +1,25 @@
 package graph
 
-// This file will not be regenerated automatically.
-//
-// It serves as dependency injection for your app, add any dependencies you require here.
+import (
+	"fmt"
 
-type Resolver struct{}
+	"github.com/ukane-philemon/scomp/internal/jwt"
+)
+
+type Resolver struct {
+	db         ClassDatabase
+	JWTManager *jwt.Manager
+}
+
+// NewResolver creates and returns a new instance of *Resolver.
+func NewResolver(db ClassDatabase) (*Resolver, error) {
+	jwtManager, err := jwt.NewJWTManager()
+	if err != nil {
+		return nil, fmt.Errorf("jwt.NewJWTManager error: %w", err)
+	}
+
+	return &Resolver{
+		db:         db,
+		JWTManager: jwtManager,
+	}, nil
+}

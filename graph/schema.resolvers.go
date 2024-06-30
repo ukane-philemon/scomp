@@ -6,19 +6,43 @@ package graph
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"log"
 
 	"github.com/ukane-philemon/scomp/graph/model"
+	"github.com/ukane-philemon/scomp/internal/db"
 )
+
+// serverError is a generic error sent for server related errors.
+var serverError = errors.New("Something unexpected happened, please try again later")
 
 // CreateAdminAccount is the resolver for the createAdminAccount field.
 func (r *mutationResolver) CreateAdminAccount(ctx context.Context, username string, password string) (string, error) {
-	panic(fmt.Errorf("not implemented: CreateAdminAccount - createAdminAccount"))
+	err := r.db.CreateAdminAccount(username, password)
+	if err != nil {
+		return "", handleError(err)
+	}
+
+	return "Admin account created successfully, proceed to login.", nil
 }
 
 // Login is the resolver for the login field.
 func (r *mutationResolver) Login(ctx context.Context, username string, password string) (*model.LoginResponse, error) {
-	panic(fmt.Errorf("not implemented: Login - login"))
+	adminInfo, err := r.db.Login(username, password)
+	if err != nil {
+		return nil, handleError(err)
+	}
+
+	authToken, err := r.JWTManager.GenerateJWtToken(adminInfo.ID)
+	if err != nil {
+		return nil, handleError(err)
+	}
+
+	return &model.LoginResponse{
+		AuthToken: authToken,
+		AdminInfo: adminInfo,
+	}, nil
 }
 
 // CreateClass is the resolver for the createClass field.
@@ -59,3 +83,14 @@ func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
+
+// handleError checks if the provided error is a server related error and logs it
+// or just returns the error.
+func handleError(err error) error {
+	if errors.Is(err, db.ErrorInvalidRequest) {
+		return err
+	}
+
+	log.Printf("\nSERVER ERROR: %v", err.Error())
+	return serverError
+}
