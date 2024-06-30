@@ -71,7 +71,7 @@ func main() {
 	srv := handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{Resolvers: resolver}))
 	chiMux := chi.NewMux()
 	chiMux.Use(middleware.Logger)
-	chiMux.Use(authMiddleware(resolver.JWTManager))
+	chiMux.Use(graph.AuthMiddleware(resolver.JWTManager))
 	chiMux.Handle("/", playground.Handler("GraphQL playground", "/scomp"))
 	chiMux.Handle("/scomp", srv)
 

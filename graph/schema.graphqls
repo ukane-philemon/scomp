@@ -79,13 +79,15 @@ input StudentSubjectScoreInput {
 }
 
 type Mutation {
-  # createAdminAccount creates a new admin account.
+  # createAdminAccount creates a new admin account and returns a success
+  # message.
   createAdminAccount(username: String!, password: String!): String!
   # login validates the admin login credentials and logs an admin into their
   # account.
   login(username: String!, password: String!): LoginResponse!
   # createClass creates a new class entry. Reports cannot be generated until
-  # student records have been added to the newly created class.
+  # student records have been added to the newly created class. Returns the
+  # newly created class ID.
   createClass(class: NewClass!): String!
    # addStudentRecord adds a student's record to an existing class and returns
    # the students ID.

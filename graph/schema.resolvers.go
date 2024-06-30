@@ -12,10 +12,8 @@ import (
 
 	"github.com/ukane-philemon/scomp/graph/model"
 	"github.com/ukane-philemon/scomp/internal/db"
+	customerror "github.com/ukane-philemon/scomp/internal/errors"
 )
-
-// serverError is a generic error sent for server related errors.
-var serverError = errors.New("Something unexpected happened, please try again later")
 
 // CreateAdminAccount is the resolver for the createAdminAccount field.
 func (r *mutationResolver) CreateAdminAccount(ctx context.Context, username string, password string) (string, error) {
@@ -47,32 +45,81 @@ func (r *mutationResolver) Login(ctx context.Context, username string, password 
 
 // CreateClass is the resolver for the createClass field.
 func (r *mutationResolver) CreateClass(ctx context.Context, class model.NewClass) (string, error) {
-	panic(fmt.Errorf("not implemented: CreateClass - createClass"))
+	if !reqAuthenticated(ctx) {
+		return "", &customerror.ErrorUnauthorized{}
+	}
+
+	classID, err := r.db.CreateClass(&class)
+	if err != nil {
+		return "", handleError(err)
+	}
+
+	return classID, nil
 }
 
 // AddStudentRecord is the resolver for the addStudentRecord field.
 func (r *mutationResolver) AddStudentRecord(ctx context.Context, classID string, student model.StudentRecordInput) (string, error) {
-	panic(fmt.Errorf("not implemented: AddStudentRecord - addStudentRecord"))
+	if !reqAuthenticated(ctx) {
+		return "", &customerror.ErrorUnauthorized{}
+	}
+
+	studentID, err := r.db.AddStudentRecordToClass(classID, &student)
+	if err != nil {
+		return "", handleError(err)
+	}
+
+	return studentID, nil
 }
 
 // ComputeClassReport is the resolver for the computeClassReport field.
 func (r *mutationResolver) ComputeClassReport(ctx context.Context, classID string) (*model.ClassInfo, error) {
+	if !reqAuthenticated(ctx) {
+		return nil, &customerror.ErrorUnauthorized{}
+	}
+
 	panic(fmt.Errorf("not implemented: ComputeClassReport - computeClassReport"))
 }
 
 // ClassInfo is the resolver for the classInfo field.
 func (r *queryResolver) ClassInfo(ctx context.Context, classID string) (*model.ClassInfo, error) {
-	panic(fmt.Errorf("not implemented: ClassInfo - classInfo"))
+	if !reqAuthenticated(ctx) {
+		return nil, &customerror.ErrorUnauthorized{}
+	}
+
+	classInfo, err := r.db.ClassInfo(classID)
+	if err != nil {
+		return nil, handleError(err)
+	}
+
+	return classInfo, nil
 }
 
 // Classes is the resolver for the classes field.
 func (r *queryResolver) Classes(ctx context.Context, hasReport *bool) ([]*model.ClassInfo, error) {
-	panic(fmt.Errorf("not implemented: Classes - classes"))
+	if !reqAuthenticated(ctx) {
+		return nil, &customerror.ErrorUnauthorized{}
+	}
+
+	classes, err := r.db.Classes(hasReport)
+	if err != nil {
+		return nil, handleError(err)
+	}
+
+	return classes, nil
 }
 
 // StudentRecord is the resolver for the studentRecord field.
 func (r *queryResolver) StudentRecord(ctx context.Context, classID string, studentID string) (*model.StudentRecord, error) {
-	panic(fmt.Errorf("not implemented: StudentRecord - studentRecord"))
+	if !reqAuthenticated(ctx) {
+		return nil, &customerror.ErrorUnauthorized{}
+	}
+
+	studentRecord, err := r.db.StudentRecord(classID, studentID)
+	if err != nil {
+		return nil, handleError(err)
+	}
+
+	return studentRecord, nil
 }
 
 // Mutation returns MutationResolver implementation.
@@ -92,5 +139,5 @@ func handleError(err error) error {
 	}
 
 	log.Printf("\nSERVER ERROR: %v", err.Error())
-	return serverError
+	return &customerror.ErrorUnknown{}
 }

@@ -1,4 +1,4 @@
-package main
+package graph
 
 import (
 	"context"
@@ -12,9 +12,9 @@ const (
 	adminCtxKey = "adminID"
 )
 
-// authMiddleware ensures the the correct and valid auth token is provided in
+// AuthMiddleware ensures the the correct and valid auth token is provided in
 // this request.
-func authMiddleware(jwtManager *jwt.Manager) func(next http.Handler) http.Handler {
+func AuthMiddleware(jwtManager *jwt.Manager) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 			authToken := req.Header.Get(jwtHeader)
