@@ -2,31 +2,53 @@
 
 package model
 
+type Admin struct {
+	ID       string `json:"id"`
+	Username string `json:"username"`
+}
+
+type ClassInfo struct {
+	ID             string           `json:"id"`
+	Name           string           `json:"name"`
+	Subjects       []*Subject       `json:"subjects"`
+	StudentsRecord []*StudentRecord `json:"studentsRecord"`
+	ClassReport    *ClassReport     `json:"classReport"`
+	CreatedAt      string           `json:"createdAt"`
+	LastUpdatedAt  string           `json:"lastUpdatedAt"`
+}
+
 type ClassReport struct {
-	ClassID                         string           `json:"classID"`
-	ClassName                       string           `json:"className"`
-	HighestStudentScore             int              `json:"highestStudentScore"`
-	HighestStudentScoreAsPercentage float64          `json:"highestStudentScoreAsPercentage"`
-	LowestStudentScore              int              `json:"lowestStudentScore"`
-	LowestStudentScoreAsPercentage  float64          `json:"lowestStudentScoreAsPercentage"`
-	StudentsReport                  []*StudentReport `json:"studentsReport"`
+	HighestStudentScore             int     `json:"highestStudentScore"`
+	HighestStudentScoreAsPercentage float64 `json:"highestStudentScoreAsPercentage"`
+	LowestStudentScore              int     `json:"lowestStudentScore"`
+	LowestStudentScoreAsPercentage  float64 `json:"lowestStudentScoreAsPercentage"`
+}
+
+type LoginResponse struct {
+	AuthToken string `json:"authToken"`
+	AdminInfo *Admin `json:"adminInfo"`
 }
 
 type Mutation struct {
 }
 
 type NewClass struct {
-	Name          string     `json:"name"`
-	ClassSubjects []*Subject `json:"classSubjects"`
+	Name          string          `json:"name"`
+	ClassSubjects []*SubjectInput `json:"classSubjects"`
 }
 
 type Query struct {
 }
 
 type StudentRecord struct {
-	ID          string         `json:"id"`
-	Name        string         `json:"name"`
-	ClassReport *StudentReport `json:"classReport,omitempty"`
+	ID     string         `json:"id"`
+	Name   string         `json:"name"`
+	Report *StudentReport `json:"report"`
+}
+
+type StudentRecordInput struct {
+	Name          string                      `json:"name"`
+	SubjectsScore []*StudentSubjectScoreInput `json:"subjectsScore"`
 }
 
 type StudentReport struct {
@@ -44,12 +66,17 @@ type StudentSubjectReport struct {
 	Position int    `json:"position"`
 }
 
-type StudentSubjectScore struct {
+type StudentSubjectScoreInput struct {
 	Name  string `json:"name"`
 	Score int    `json:"score"`
 }
 
 type Subject struct {
+	Name     string `json:"name"`
+	MaxScore int    `json:"maxScore"`
+}
+
+type SubjectInput struct {
 	Name     string `json:"name"`
 	MaxScore int    `json:"maxScore"`
 }
