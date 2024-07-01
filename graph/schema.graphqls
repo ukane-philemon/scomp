@@ -1,107 +1,55 @@
 
-type ClassReport {
-  highestStudentScore: Int!
-  highestStudentScoreAsPercentage: Float!
-  lowestStudentScore: Int!
-  lowestStudentScoreAsPercentage: Float!
-}
-
-type StudentRecord {
+type AuthenticatedAdmin {
   id: String!
+  username: String!
+  authToken: String!
+}
+
+# Class is a type holder and would be replaced by autobind.
+type Class {
   name: String!
-  report: StudentReport!
 }
 
-type StudentReport {
-  classPosition: Int! # overall position in the class based on total score.
-  classGrade: String! # overall grade based on total score or percentage.
-  subjectReport: [StudentSubjectReport!]!  # individual report for each subject.
-  totalScore: Int! # sum of student scores across all subjects
-  totalScorePercentage: Float! # total student score as a percentage of the maximum possible score
+# Student isa type holder and would be replaced by autobind.
+type Student {
+  name: String!
 }
 
-type StudentSubjectReport {
-    name: String! # subject name
-    score: Int! # subject score
-    grade: String! # grade for subject
-    position: Int! # position for subject based on subject score
+type CompleteClassInfo {
+  class: Class!
+  students: [Student]!
 }
 
-type StudentSubjectScore {
-    studentID: String!
-    subjectScores: [SubjectScoreInput!]!
-}
-
-type SubjectScoreInput {
+input SubjectScore {
   name: String!
   score: Int!
 }
 
-type ClassInfo {
-  id: String!
-	name: String!
-	subjects: [Subject!]!
-  studentRecords: [StudentRecord!]!
-  classReport: ClassReport!
-  createdAt: String!
-  lastUpdatedAt: String!
-}
-
-type Subject {
+input Subject {
   name: String!
   maxScore: Int!
-}
-
-type Admin {
-  id: String!
-  username: String!
-}
-
-type LoginResponse {
-  authToken: String!
-  adminInfo: Admin!
 }
 
 type Query {
- classInfo(classID: String!): ClassInfo!
- classes(hasReport: Boolean): [ClassInfo!]!
- studentRecord(classID: String!, studentID: String!): StudentRecord!
-}
-
-input NewClass {
-  name: String!
-  classSubjects: [SubjectInput!]!
-}
-
-input SubjectInput {
-  name: String!
-  maxScore: Int!
-}
-
-input StudentRecordInput {
-  name: String!
-  subjectScores: [StudentSubjectScoreInput!]!
-}
-
-input StudentSubjectScoreInput {
-  name: String!
-  score: Int!
+ classInfo(classID: String!): CompleteClassInfo!
+ classes(hasReport: Boolean): [CompleteClassInfo!]!
+ student(classID: String!, studentID: String!): Student!
+ students(classID: String!): [Student!]!
 }
 
 type Mutation {
-  # createAdminAccount creates a new admin account and returns a success
-  # message.
+  # createAdminAccount creates a new admin account.
   createAdminAccount(username: String!, password: String!): String!
   # login validates the admin login credentials and logs an admin into their
   # account.
-  login(username: String!, password: String!): LoginResponse!
+  login(username: String!, password: String!): AuthenticatedAdmin!
   # createClass creates a new class entry. Reports cannot be generated until
   # student records have been added to the newly created class. Returns the
   # newly created class ID.
-  createClass(class: NewClass!): String!
+  createClass(className: String!, subjects: [Subject!]!): String!
    # addStudentRecord adds a student's record to an existing class and returns
    # the students ID.
-  addStudentRecord(classID: String!, student: StudentRecordInput!): String!
+  addStudentRecord(classID: String!, studentName: String!, subjectScores: [SubjectScore!]!): String!
   # computeClassReport computes the report for the class that match the provided
   # classID in the background.
   computeClassReport(classID: String!): String!

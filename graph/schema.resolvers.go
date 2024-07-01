@@ -6,46 +6,51 @@ package graph
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"github.com/ukane-philemon/scomp/graph/model"
+	"github.com/ukane-philemon/scomp/internal/class"
+	"github.com/ukane-philemon/scomp/internal/db"
 	customerror "github.com/ukane-philemon/scomp/internal/errors"
+	"github.com/ukane-philemon/scomp/internal/student"
 )
 
 // CreateAdminAccount is the resolver for the createAdminAccount field.
 func (r *mutationResolver) CreateAdminAccount(ctx context.Context, username string, password string) (string, error) {
-	err := r.db.CreateAdminAccount(username, password)
+	adminID, err := r.AdminRepo.CreateAccount(username, password)
 	if err != nil {
 		return "", handleError(err)
 	}
-
-	return "Admin account created successfully, proceed to login.", nil
+	return adminID, nil
 }
 
 // Login is the resolver for the login field.
-func (r *mutationResolver) Login(ctx context.Context, username string, password string) (*model.LoginResponse, error) {
-	adminInfo, err := r.db.Login(username, password)
+func (r *mutationResolver) Login(ctx context.Context, username string, password string) (*model.AuthenticatedAdmin, error) {
+	adminID, err := r.AdminRepo.CreateAccount(username, password)
 	if err != nil {
 		return nil, handleError(err)
 	}
 
-	authToken, err := r.JWTManager.GenerateJWtToken(adminInfo.ID)
+	authToken, err := r.AuthRepo.GenerateToken(adminID)
 	if err != nil {
 		return nil, handleError(err)
 	}
 
-	return &model.LoginResponse{
+	return &model.AuthenticatedAdmin{
+		ID:        adminID,
+		Username:  username,
 		AuthToken: authToken,
-		AdminInfo: adminInfo,
 	}, nil
 }
 
 // CreateClass is the resolver for the createClass field.
-func (r *mutationResolver) CreateClass(ctx context.Context, class model.NewClass) (string, error) {
+func (r *mutationResolver) CreateClass(ctx context.Context, className string, subjects []*class.Subject) (string, error) {
 	if !reqAuthenticated(ctx) {
 		return "", &customerror.ErrorUnauthorized{}
 	}
 
-	classID, err := r.db.CreateClass(&class)
+	classID, err := r.ClassRepo.Create(className, subjects)
 	if err != nil {
 		return "", handleError(err)
 	}
@@ -54,14 +59,43 @@ func (r *mutationResolver) CreateClass(ctx context.Context, class model.NewClass
 }
 
 // AddStudentRecord is the resolver for the addStudentRecord field.
-func (r *mutationResolver) AddStudentRecord(ctx context.Context, classID string, student model.StudentRecordInput) (string, error) {
+func (r *mutationResolver) AddStudentRecord(ctx context.Context, classID string, studentName string, subjectScores []*student.SubjectScore) (string, error) {
 	if !reqAuthenticated(ctx) {
 		return "", &customerror.ErrorUnauthorized{}
 	}
 
-	studentID, err := r.db.AddStudentRecordToClass(classID, &student)
+	// Ensure classID is valid.
+	class, err := r.ClassRepo.Class(classID)
 	if err != nil {
 		return "", handleError(err)
+	}
+
+	if len(subjectScores) != len(class.Subjects) {
+		return "", fmt.Errorf("%w: %d class subjects are required to save a student's record", db.ErrorInvalidRequest, len(class.Subjects))
+	}
+
+	subjectMaxScores := make(map[string]int, len(class.Subjects))
+	for _, subject := range class.Subjects {
+		subjectMaxScores[subject.Name] = subject.MaxScore
+	}
+
+	for _, subject := range subjectScores {
+		maxSubjectScore, found := subjectMaxScores[subject.Name]
+		if !found {
+			return "", fmt.Errorf("%w: subject name %s does not exist, check spelling as subject names are case sensitive.",
+				db.ErrorInvalidRequest, subject.Name)
+		}
+
+		if subject.Score > maxSubjectScore {
+			return "", fmt.Errorf("%w: student score (%d) for subject %s exceeds the maximum score (%d) for this subject",
+				db.ErrorInvalidRequest, subject.Score, subject.Name, maxSubjectScore)
+		}
+	}
+
+	// Create student.
+	studentID, err := r.StudentRepo.Create(classID, studentName, subjectScores)
+	if err != nil {
+		return "", nil
 	}
 
 	return studentID, nil
@@ -73,61 +107,119 @@ func (r *mutationResolver) ComputeClassReport(ctx context.Context, classID strin
 		return "", &customerror.ErrorUnauthorized{}
 	}
 
-	classSubjects, studentsInfo, err := r.db.ClassInfoForReport(classID)
+	class, err := r.ClassRepo.Class(classID)
 	if err != nil {
 		return "", handleError(err)
 	}
 
-	// Execute in the background.
+	// Retrieve student record for this class.
+	studentScores, err := r.StudentRepo.StudentScores(classID)
+	if err != nil {
+		return "", handleError(err)
+	}
+
+	const minStudentScores = 2
+	if len(studentScores) < minStudentScores {
+		return "", fmt.Errorf("add at least %d students to this class before generating a report", minStudentScores)
+	}
+
+	// Compute asynchronously as this task may take some time.
 	r.wg.Add(1)
 	go func() {
-		r.wg.Done()
-		r.computeClassReport(classID, classSubjects, studentsInfo)
+		defer r.wg.Done()
+		r.computeClassReport(classID, class.Subjects, studentScores)
 	}()
 
-	return "Class report is being computed in the background, request for class report in ~10mins", nil
+	return "Class report is being generated, check back in a few minutes", nil
 }
 
 // ClassInfo is the resolver for the classInfo field.
-func (r *queryResolver) ClassInfo(ctx context.Context, classID string) (*model.ClassInfo, error) {
+func (r *queryResolver) ClassInfo(ctx context.Context, classID string) (*model.CompleteClassInfo, error) {
 	if !reqAuthenticated(ctx) {
 		return nil, &customerror.ErrorUnauthorized{}
 	}
 
-	classInfo, err := r.db.ClassInfo(classID)
+	class, err := r.ClassRepo.Class(classID)
 	if err != nil {
 		return nil, handleError(err)
 	}
 
-	return classInfo, nil
+	// Retrieve student record for this class.
+	classStudents, err := r.StudentRepo.Students(classID)
+	if err != nil {
+		return nil, handleError(err)
+	}
+
+	return &model.CompleteClassInfo{
+		Class:    class,
+		Students: classStudents,
+	}, nil
 }
 
 // Classes is the resolver for the classes field.
-func (r *queryResolver) Classes(ctx context.Context, hasReport *bool) ([]*model.ClassInfo, error) {
+func (r *queryResolver) Classes(ctx context.Context, hasReport *bool) ([]*model.CompleteClassInfo, error) {
 	if !reqAuthenticated(ctx) {
 		return nil, &customerror.ErrorUnauthorized{}
 	}
 
-	classes, err := r.db.Classes(hasReport)
+	classes, err := r.ClassRepo.Classes(hasReport)
 	if err != nil {
 		return nil, handleError(err)
 	}
 
-	return classes, nil
+	var completeClassInfo []*model.CompleteClassInfo
+	for _, class := range classes {
+		// Retrieve student record for this class.
+		classStudents, err := r.StudentRepo.Students(class.ID)
+		if err != nil {
+			return nil, handleError(err)
+		}
+
+		completeClassInfo = append(completeClassInfo, &model.CompleteClassInfo{
+			Class:    class,
+			Students: classStudents,
+		})
+	}
+
+	return completeClassInfo, err
 }
 
-// StudentRecord is the resolver for the studentRecord field.
-func (r *queryResolver) StudentRecord(ctx context.Context, classID string, studentID string) (*model.StudentRecord, error) {
+// Student is the resolver for the student field.
+func (r *queryResolver) Student(ctx context.Context, classID string, studentID string) (*student.Student, error) {
 	if !reqAuthenticated(ctx) {
 		return nil, &customerror.ErrorUnauthorized{}
 	}
 
-	studentRecord, err := r.db.StudentRecord(classID, studentID)
+	student, err := r.StudentRepo.Student(classID, studentID)
 	if err != nil {
 		return nil, handleError(err)
 	}
 
-	return studentRecord, nil
+	return student, nil
+}
+
+// Students is the resolver for the students field.
+func (r *queryResolver) Students(ctx context.Context, classID string) ([]*student.Student, error) {
+	if !reqAuthenticated(ctx) {
+		return nil, &customerror.ErrorUnauthorized{}
+	}
+
+	classExists, err := r.ClassRepo.Exists(classID)
+	if err != nil {
+		return nil, handleError(err)
+	}
+
+	if !classExists {
+		return nil, errors.New("class does not exist")
+	}
+
+	// Retrieve student record for this class.
+	classStudents, err := r.StudentRepo.Students(classID)
+	if err != nil {
+		return nil, handleError(err)
+	}
+
+	return classStudents, nil
 }
 
 // Mutation returns MutationResolver implementation.

@@ -4,15 +4,15 @@ go 1.22.4
 
 require (
 	github.com/99designs/gqlgen v0.17.49
+	github.com/cristalhq/jwt/v4 v4.0.2
+	github.com/go-chi/chi v1.5.5
 	github.com/vektah/gqlparser/v2 v2.5.16
 	go.mongodb.org/mongo-driver v1.16.0
-	golang.org/x/crypto v0.22.0
+	golang.org/x/crypto v0.24.0
 )
 
 require (
 	github.com/agnivade/levenshtein v1.1.1 // indirect
-	github.com/cristalhq/jwt/v4 v4.0.2
-	github.com/go-chi/chi v1.5.5
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
