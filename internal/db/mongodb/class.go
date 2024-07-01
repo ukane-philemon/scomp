@@ -282,7 +282,7 @@ func (mdb *MongoDB) ClassInfo(classID string) (*model.ClassInfo, error) {
 
 // ClassInfoForReport returns the class details required to generate a report.
 // Returns db.ErrorInvalidRequest if or a report has been generated for this
-// class. The second return value us a map of student name to their score
+// class. The second return value is a map of student name to their score
 // records.
 func (mdb *MongoDB) ClassInfoForReport(classID string) (map[string]*model.Subject, map[string]*model.StudentSubjectScore, error) {
 	if classID == "" {
