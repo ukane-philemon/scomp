@@ -48,11 +48,17 @@ func main() {
 		log.Fatalf("mongodb.New error: %v", err)
 	}
 
+	resolver, err := graph.NewResolver(nil)
+	if err != nil {
+		log.Fatalf("graph.NewResolver error: %v", err)
+	}
+
 	// Ensure graceful shutdown by capturing SIGINT and SIGTERM signals.
 	shutdownChan := make(chan os.Signal, 1)
 	signal.Notify(shutdownChan, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-shutdownChan
+		resolver.Wait()
 		cancel()
 
 		dbShutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -63,11 +69,6 @@ func main() {
 		}
 	}()
 
-	resolver, err := graph.NewResolver(nil)
-	if err != nil {
-		log.Fatalf("graph.NewResolver error: %v", err)
-	}
-
 	srv := handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{Resolvers: resolver}))
 	chiMux := chi.NewMux()
 	chiMux.Use(middleware.Logger)
@@ -75,21 +76,11 @@ func main() {
 	chiMux.Handle("/", playground.Handler("GraphQL playground", "/scomp"))
 	chiMux.Handle("/scomp", srv)
 
-	var serverError error
-	go func() {
-		err := http.ListenAndServe(":"+port, chiMux)
-		if err != nil && err != http.ErrServerClosed {
-			serverError = err
-		}
-	}()
-
 	log.Printf("\nSCOMP has started successfully, connect to http://localhost:%s/ for GraphQL playground", port)
 
-	// Wait for application shutdown.
-	<-ctx.Done()
-
-	if serverError != nil {
-		log.Printf("SCOMP shutdown error: %v", serverError)
+	err = http.ListenAndServe(":"+port, chiMux)
+	if err != nil && err != http.ErrServerClosed {
+		log.Printf("SCOMP shutdown error: %v", err)
 	} else {
 		log.Println("SCOMP shutdown successfully...")
 	}

@@ -32,8 +32,9 @@ type ClassDatabase interface {
 	ClassInfo(classID string) (*model.ClassInfo, error)
 	// ClassInfoForReport returns the class details required to generate a
 	// report. Returns db.ErrorInvalidRequest if or a report has been generated
-	// for this class.
-	ClassInfoForReport(classID string) (map[string]*model.Subject, map[string][]*model.StudentSubjectScoreInput, error)
+	// for this class. The second return value is a map of student name to their
+	// score records.
+	ClassInfoForReport(classID string) (map[string]*model.Subject, map[string]*model.StudentSubjectScore, error)
 	// Classes returns information for all classes from the database. Set
 	// hasReport to true to return only classes that have a report.
 	Classes(hasReport *bool) ([]*model.ClassInfo, error)

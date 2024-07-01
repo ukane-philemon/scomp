@@ -13,6 +13,10 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+// minStudentsForReport is the minimum number of students required to generate a
+// class report.
+const minStudentsForReport = 2
+
 // CreateClass creates a new class in the database. Returns
 // db.ErrorInvalidRequest is the provided class name matches any record in the
 // database.
@@ -43,7 +47,7 @@ func (mdb *MongoDB) CreateClass(class *model.NewClass) (string, error) {
 		ID:                    primitive.NewObjectID(),
 		Name:                  class.Name,
 		Subjects:              subjectMap,
-		StudentsSubjectRecord: make(map[string][]*model.StudentSubjectScoreInput),
+		StudentsSubjectRecord: make(map[string]*model.StudentSubjectScore),
 		CreatedAt:             nowUnix,
 		LastUpdatedAt:         nowUnix,
 	}
@@ -67,7 +71,7 @@ func (mdb *MongoDB) AddStudentRecordToClass(classID string, studentRecord *model
 		return "", fmt.Errorf("%w: missing required argument(s)", db.ErrorInvalidRequest)
 	}
 
-	if len(studentRecord.SubjectsScore) != db.RequiredClassSubjects {
+	if len(studentRecord.SubjectScores) != db.RequiredClassSubjects {
 		return "", fmt.Errorf("%w: %d class subjects are required to save a student's report", db.ErrorInvalidRequest, db.RequiredClassSubjects)
 	}
 
@@ -80,7 +84,7 @@ func (mdb *MongoDB) AddStudentRecordToClass(classID string, studentRecord *model
 		dbIDKey:        1,
 		subjectsKey:    1,
 		classReportKey: 1,
-		mapKey(studentsSubjectRecordKey, studentRecord.Name): 1,
+		mapKey(studentSubjectsRecordKey, studentRecord.Name): 1,
 	})
 
 	// Retrieve class information.
@@ -103,7 +107,7 @@ func (mdb *MongoDB) AddStudentRecordToClass(classID string, studentRecord *model
 		return "", fmt.Errorf("%w: student name %s has already been added to this class", db.ErrorInvalidRequest, studentRecord.Name)
 	}
 
-	for index, subject := range studentRecord.SubjectsScore {
+	for index, subject := range studentRecord.SubjectScores {
 		if subject.Name == "" {
 			return "", fmt.Errorf("%w: student subject %d is missing subject name", db.ErrorInvalidRequest, index+1)
 		}
@@ -125,16 +129,6 @@ func (mdb *MongoDB) AddStudentRecordToClass(classID string, studentRecord *model
 	}
 
 	addStudentFn := func(ctx mongo.SessionContext) (interface{}, error) {
-		// Update the class record with student information.
-		classCollectionUpdate := bson.M{actionSet: bson.M{
-			mapKey(studentsSubjectRecordKey, studentRecord.Name): studentRecord.SubjectsScore,
-			lastUpdatedAtKey: time.Now().Unix(),
-		}}
-		_, err = mdb.classCollection.UpdateOne(ctx, classFilter, classCollectionUpdate)
-		if err != nil {
-			return "", fmt.Errorf("adminCollection.UpdateOne error: %w", err)
-		}
-
 		// Create student record.
 		dbStudentRecord := &dbStudentRecord{
 			ID:      primitive.NewObjectID(),
@@ -146,7 +140,22 @@ func (mdb *MongoDB) AddStudentRecordToClass(classID string, studentRecord *model
 			return "", fmt.Errorf("studentCollection.InsertOne error: %w", err)
 		}
 
-		return res, nil
+		studentIDStr := res.InsertedID.(primitive.ObjectID).Hex()
+
+		// Update the class record with student information.
+		classCollectionUpdate := bson.M{actionSet: bson.M{
+			mapKey(studentSubjectsRecordKey, studentRecord.Name): &model.StudentSubjectScore{
+				StudentID:     studentIDStr,
+				SubjectScores: convertToSubjectScoreInput(studentRecord.SubjectScores),
+			},
+			lastUpdatedAtKey: time.Now().Unix(),
+		}}
+		_, err = mdb.classCollection.UpdateOne(ctx, classFilter, classCollectionUpdate)
+		if err != nil {
+			return "", fmt.Errorf("adminCollection.UpdateOne error: %w", err)
+		}
+
+		return studentIDStr, nil
 	}
 
 	studentID, err := mdb.withSession(addStudentFn)
@@ -154,7 +163,7 @@ func (mdb *MongoDB) AddStudentRecordToClass(classID string, studentRecord *model
 		return "", err
 	}
 
-	return studentID.(primitive.ObjectID).Hex(), nil
+	return studentID.(string), nil
 }
 
 // SaveClassReport saves a generated class report. Returns
@@ -205,7 +214,7 @@ func (mdb *MongoDB) SaveClassReport(classID string, classReport *model.ClassRepo
 			}
 
 			studentFilter := bson.M{
-				dbIDKey: dbClassID,
+				dbIDKey: studentID,
 				classID: classID,
 			}
 
@@ -264,7 +273,7 @@ func (mdb *MongoDB) ClassInfo(classID string) (*model.ClassInfo, error) {
 		ID:             cInfo.ID.Hex(),
 		Name:           cInfo.Name,
 		Subjects:       cInfo.SubjectsToArray(),
-		StudentsRecord: classStudents,
+		StudentRecords: classStudents,
 		ClassReport:    cInfo.ClassReport,
 		CreatedAt:      fmt.Sprint(cInfo.CreatedAt),
 		LastUpdatedAt:  fmt.Sprint(cInfo.LastUpdatedAt),
@@ -273,8 +282,9 @@ func (mdb *MongoDB) ClassInfo(classID string) (*model.ClassInfo, error) {
 
 // ClassInfoForReport returns the class details required to generate a report.
 // Returns db.ErrorInvalidRequest if or a report has been generated for this
-// class.
-func (mdb *MongoDB) ClassInfoForReport(classID string) (map[string]*model.Subject, map[string][]*model.StudentSubjectScoreInput, error) {
+// class. The second return value is a map of student name to their score
+// records.
+func (mdb *MongoDB) ClassInfoForReport(classID string) (map[string]*model.Subject, map[string]*model.StudentSubjectScore, error) {
 	if classID == "" {
 		return nil, nil, fmt.Errorf("%w: missing classID", db.ErrorInvalidRequest)
 	}
@@ -296,6 +306,11 @@ func (mdb *MongoDB) ClassInfoForReport(classID string) (map[string]*model.Subjec
 
 	if cInfo.ClassReport != nil {
 		return nil, nil, fmt.Errorf("%w: a report has already been generated for this class", db.ErrorInvalidRequest)
+	}
+
+	if len(cInfo.StudentsSubjectRecord) < minStudentsForReport {
+		return nil, nil, fmt.Errorf("%w: a minimum of %d students is required to generate a report for this class",
+			db.ErrorInvalidRequest, minStudentsForReport)
 	}
 
 	return cInfo.Subjects, cInfo.StudentsSubjectRecord, nil
@@ -364,7 +379,7 @@ func (mdb *MongoDB) Classes(hasReport *bool) ([]*model.ClassInfo, error) {
 			ID:             cInfo.ID.Hex(),
 			Name:           cInfo.Name,
 			Subjects:       cInfo.SubjectsToArray(),
-			StudentsRecord: classStudents,
+			StudentRecords: classStudents,
 			ClassReport:    cInfo.ClassReport,
 			CreatedAt:      fmt.Sprint(cInfo.CreatedAt),
 			LastUpdatedAt:  fmt.Sprint(cInfo.LastUpdatedAt),
@@ -411,4 +426,17 @@ func (mdb *MongoDB) classStudents(classID string) ([]*model.StudentRecord, error
 	}
 
 	return students, nil
+}
+
+// convertToSubjectScoreInput is a helper function that converts
+// []*model.StudentSubjectScoreInput to []*model.SubjectScoreInput.
+func convertToSubjectScoreInput(subjects []*model.StudentSubjectScoreInput) []*model.SubjectScoreInput {
+	var subjectsScore []*model.SubjectScoreInput
+	for _, subject := range subjects {
+		subjectsScore = append(subjectsScore, &model.SubjectScoreInput{
+			Name:  subject.Name,
+			Score: subject.Score,
+		})
+	}
+	return subjectsScore
 }

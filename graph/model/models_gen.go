@@ -11,7 +11,7 @@ type ClassInfo struct {
 	ID             string           `json:"id"`
 	Name           string           `json:"name"`
 	Subjects       []*Subject       `json:"subjects"`
-	StudentsRecord []*StudentRecord `json:"studentsRecord"`
+	StudentRecords []*StudentRecord `json:"studentRecords"`
 	ClassReport    *ClassReport     `json:"classReport"`
 	CreatedAt      string           `json:"createdAt"`
 	LastUpdatedAt  string           `json:"lastUpdatedAt"`
@@ -48,7 +48,7 @@ type StudentRecord struct {
 
 type StudentRecordInput struct {
 	Name          string                      `json:"name"`
-	SubjectsScore []*StudentSubjectScoreInput `json:"subjectsScore"`
+	SubjectScores []*StudentSubjectScoreInput `json:"subjectScores"`
 }
 
 type StudentReport struct {
@@ -66,6 +66,11 @@ type StudentSubjectReport struct {
 	Position int    `json:"position"`
 }
 
+type StudentSubjectScore struct {
+	StudentID     string               `json:"studentID"`
+	SubjectScores []*SubjectScoreInput `json:"subjectScores"`
+}
+
 type StudentSubjectScoreInput struct {
 	Name  string `json:"name"`
 	Score int    `json:"score"`
@@ -79,4 +84,9 @@ type Subject struct {
 type SubjectInput struct {
 	Name     string `json:"name"`
 	MaxScore int    `json:"maxScore"`
+}
+
+type SubjectScoreInput struct {
+	Name  string `json:"name"`
+	Score int    `json:"score"`
 }

@@ -6,12 +6,8 @@ package graph
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"log"
 
 	"github.com/ukane-philemon/scomp/graph/model"
-	"github.com/ukane-philemon/scomp/internal/db"
 	customerror "github.com/ukane-philemon/scomp/internal/errors"
 )
 
@@ -72,12 +68,24 @@ func (r *mutationResolver) AddStudentRecord(ctx context.Context, classID string,
 }
 
 // ComputeClassReport is the resolver for the computeClassReport field.
-func (r *mutationResolver) ComputeClassReport(ctx context.Context, classID string) (*model.ClassInfo, error) {
+func (r *mutationResolver) ComputeClassReport(ctx context.Context, classID string) (string, error) {
 	if !reqAuthenticated(ctx) {
-		return nil, &customerror.ErrorUnauthorized{}
+		return "", &customerror.ErrorUnauthorized{}
 	}
 
-	panic(fmt.Errorf("not implemented: ComputeClassReport - computeClassReport"))
+	classSubjects, studentsInfo, err := r.db.ClassInfoForReport(classID)
+	if err != nil {
+		return "", handleError(err)
+	}
+
+	// Execute in the background.
+	r.wg.Add(1)
+	go func() {
+		r.wg.Done()
+		r.computeClassReport(classID, classSubjects, studentsInfo)
+	}()
+
+	return "Class report is being computed in the background, request for class report in ~10mins", nil
 }
 
 // ClassInfo is the resolver for the classInfo field.
@@ -130,14 +138,3 @@ func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
-
-// handleError checks if the provided error is a server related error and logs it
-// or just returns the error.
-func handleError(err error) error {
-	if errors.Is(err, db.ErrorInvalidRequest) {
-		return err
-	}
-
-	log.Printf("\nSERVER ERROR: %v", err.Error())
-	return &customerror.ErrorUnknown{}
-}

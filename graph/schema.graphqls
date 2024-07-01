@@ -27,11 +27,21 @@ type StudentSubjectReport {
     position: Int! # position for subject based on subject score
 }
 
+type StudentSubjectScore {
+    studentID: String!
+    subjectScores: [SubjectScoreInput!]!
+}
+
+type SubjectScoreInput {
+  name: String!
+  score: Int!
+}
+
 type ClassInfo {
   id: String!
 	name: String!
 	subjects: [Subject!]!
-  studentsRecord: [StudentRecord!]!
+  studentRecords: [StudentRecord!]!
   classReport: ClassReport!
   createdAt: String!
   lastUpdatedAt: String!
@@ -70,7 +80,7 @@ input SubjectInput {
 
 input StudentRecordInput {
   name: String!
-  subjectsScore: [StudentSubjectScoreInput!]!
+  subjectScores: [StudentSubjectScoreInput!]!
 }
 
 input StudentSubjectScoreInput {
@@ -93,6 +103,6 @@ type Mutation {
    # the students ID.
   addStudentRecord(classID: String!, student: StudentRecordInput!): String!
   # computeClassReport computes the report for the class that match the provided
-  # classID and returns the class information.
-  computeClassReport(classID: String!): ClassInfo!
+  # classID in the background.
+  computeClassReport(classID: String!): String!
 }
