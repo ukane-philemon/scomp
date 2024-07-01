@@ -48,7 +48,7 @@ func main() {
 		log.Fatalf("mongodb.New error: %v", err)
 	}
 
-	resolver, err := graph.NewResolver(nil)
+	resolver, err := graph.NewResolver(db)
 	if err != nil {
 		log.Fatalf("graph.NewResolver error: %v", err)
 	}
