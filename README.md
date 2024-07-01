@@ -1,4 +1,4 @@
-# scomp 
+# SCOMP 📟 
 SCOMP is a Graphql-based computational service that computes student
 records in a class and grades each student according to their respective performance in reported
 subjects. 
