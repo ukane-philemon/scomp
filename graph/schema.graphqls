@@ -103,6 +103,6 @@ type Mutation {
    # the students ID.
   addStudentRecord(classID: String!, student: StudentRecordInput!): String!
   # computeClassReport computes the report for the class that match the provided
-  # classID and returns the class information.
-  computeClassReport(classID: String!): ClassInfo!
+  # classID in the background.
+  computeClassReport(classID: String!): String!
 }

@@ -130,7 +130,7 @@ type MutationResolver interface {
 	Login(ctx context.Context, username string, password string) (*model.LoginResponse, error)
 	CreateClass(ctx context.Context, class model.NewClass) (string, error)
 	AddStudentRecord(ctx context.Context, classID string, student model.StudentRecordInput) (string, error)
-	ComputeClassReport(ctx context.Context, classID string) (*model.ClassInfo, error)
+	ComputeClassReport(ctx context.Context, classID string) (string, error)
 }
 type QueryResolver interface {
 	ClassInfo(ctx context.Context, classID string) (*model.ClassInfo, error)
@@ -1763,9 +1763,9 @@ func (ec *executionContext) _Mutation_computeClassReport(ctx context.Context, fi
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.ClassInfo)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalNClassInfo2ᚖgithubᚗcomᚋukaneᚑphilemonᚋscompᚋgraphᚋmodelᚐClassInfo(ctx, field.Selections, res)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_computeClassReport(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1775,23 +1775,7 @@ func (ec *executionContext) fieldContext_Mutation_computeClassReport(ctx context
 		IsMethod:   true,
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_ClassInfo_id(ctx, field)
-			case "name":
-				return ec.fieldContext_ClassInfo_name(ctx, field)
-			case "subjects":
-				return ec.fieldContext_ClassInfo_subjects(ctx, field)
-			case "studentRecords":
-				return ec.fieldContext_ClassInfo_studentRecords(ctx, field)
-			case "classReport":
-				return ec.fieldContext_ClassInfo_classReport(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_ClassInfo_createdAt(ctx, field)
-			case "lastUpdatedAt":
-				return ec.fieldContext_ClassInfo_lastUpdatedAt(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type ClassInfo", field.Name)
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	defer func() {
