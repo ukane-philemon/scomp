@@ -1,13 +1,13 @@
 # scomp 
-SCOMP is a Graphql based computational service that computes class student
-records and grade students according to their respective scores in reported
+SCOMP is a Graphql-based computational service that computes student
+records in a class and grades each student according to their respective performance in reported
 subjects. 
 
 # Features ⚡
 1. Create an admin account.
-2. Login to existing admin account.
+2. Login to an existing admin account.
 3. Create a class.
-4. Add a student record to a an existing class.
+4. Add a student record to an existing class.
 5. Compute class report.
 6. Query class record
 7. Query student record
@@ -15,8 +15,8 @@ subjects.
 
 # Limitations ⚠️
 
-1. Class must contain at least 2 students to compute class report.
-2. Class reports can only be generated once.
+1. A class must contain at least 2 students to compute class reports.
+2. Class report can only be generated once.
 3. Student records cannot be added to a class after a report has been generated
    for that class.
 4. To use this service for the same class with another set of students, classes
