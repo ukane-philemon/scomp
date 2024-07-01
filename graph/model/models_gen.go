@@ -2,91 +2,24 @@
 
 package model
 
-type Admin struct {
-	ID       string `json:"id"`
-	Username string `json:"username"`
-}
+import (
+	"github.com/ukane-philemon/scomp/internal/class"
+	"github.com/ukane-philemon/scomp/internal/student"
+)
 
-type ClassInfo struct {
-	ID             string           `json:"id"`
-	Name           string           `json:"name"`
-	Subjects       []*Subject       `json:"subjects"`
-	StudentRecords []*StudentRecord `json:"studentRecords"`
-	ClassReport    *ClassReport     `json:"classReport"`
-	CreatedAt      string           `json:"createdAt"`
-	LastUpdatedAt  string           `json:"lastUpdatedAt"`
-}
-
-type ClassReport struct {
-	HighestStudentScore             int     `json:"highestStudentScore"`
-	HighestStudentScoreAsPercentage float64 `json:"highestStudentScoreAsPercentage"`
-	LowestStudentScore              int     `json:"lowestStudentScore"`
-	LowestStudentScoreAsPercentage  float64 `json:"lowestStudentScoreAsPercentage"`
-}
-
-type LoginResponse struct {
+type AuthenticatedAdmin struct {
+	ID        string `json:"id"`
+	Username  string `json:"username"`
 	AuthToken string `json:"authToken"`
-	AdminInfo *Admin `json:"adminInfo"`
+}
+
+type CompleteClassInfo struct {
+	Class    *class.Class       `json:"class"`
+	Students []*student.Student `json:"students"`
 }
 
 type Mutation struct {
 }
 
-type NewClass struct {
-	Name          string          `json:"name"`
-	ClassSubjects []*SubjectInput `json:"classSubjects"`
-}
-
 type Query struct {
-}
-
-type StudentRecord struct {
-	ID     string         `json:"id"`
-	Name   string         `json:"name"`
-	Report *StudentReport `json:"report"`
-}
-
-type StudentRecordInput struct {
-	Name          string                      `json:"name"`
-	SubjectScores []*StudentSubjectScoreInput `json:"subjectScores"`
-}
-
-type StudentReport struct {
-	ClassPosition        int                     `json:"classPosition"`
-	ClassGrade           string                  `json:"classGrade"`
-	SubjectReport        []*StudentSubjectReport `json:"subjectReport"`
-	TotalScore           int                     `json:"totalScore"`
-	TotalScorePercentage float64                 `json:"totalScorePercentage"`
-}
-
-type StudentSubjectReport struct {
-	Name     string `json:"name"`
-	Score    int    `json:"score"`
-	Grade    string `json:"grade"`
-	Position int    `json:"position"`
-}
-
-type StudentSubjectScore struct {
-	StudentID     string               `json:"studentID"`
-	SubjectScores []*SubjectScoreInput `json:"subjectScores"`
-}
-
-type StudentSubjectScoreInput struct {
-	Name  string `json:"name"`
-	Score int    `json:"score"`
-}
-
-type Subject struct {
-	Name     string `json:"name"`
-	MaxScore int    `json:"maxScore"`
-}
-
-type SubjectInput struct {
-	Name     string `json:"name"`
-	MaxScore int    `json:"maxScore"`
-}
-
-type SubjectScoreInput struct {
-	Name  string `json:"name"`
-	Score int    `json:"score"`
 }

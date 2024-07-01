@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/ukane-philemon/scomp/internal/jwt"
+	"github.com/ukane-philemon/scomp/internal/auth"
 )
 
 const (
@@ -14,7 +14,7 @@ const (
 
 // AuthMiddleware ensures the the correct and valid auth token is provided in
 // this request.
-func AuthMiddleware(jwtManager *jwt.Manager) func(next http.Handler) http.Handler {
+func AuthMiddleware(authRepo auth.Repository) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 			authToken := req.Header.Get(jwtHeader)
@@ -23,14 +23,14 @@ func AuthMiddleware(jwtManager *jwt.Manager) func(next http.Handler) http.Handle
 				return
 			}
 
-			adminID, validToken := jwtManager.IsValidToken(authToken)
+			uniqueID, validToken := authRepo.IsValid(authToken)
 			if !validToken {
 				http.Error(res, "not authorized", http.StatusForbidden)
 				return
 			}
 
 			// Set the adminCtxKey for use by subsequent handlers.
-			req = req.WithContext(context.WithValue(req.Context(), adminCtxKey, adminID))
+			req = req.WithContext(context.WithValue(req.Context(), adminCtxKey, uniqueID))
 			next.ServeHTTP(res, req)
 		})
 	}
