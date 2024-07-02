@@ -3,7 +3,7 @@ SCOMP is a Graphql-based computational service that computes student
 records in a class and grades each student according to their respective performance in reported
 subjects. 
 
-# Features ⚡
+## Features ⚡
 1. Create an admin account.
 2. Login to an existing admin account.
 3. Create a class.
@@ -13,7 +13,7 @@ subjects.
 7. Query student record.
 8. Query all existing classes.
 
-# Limitations ⚠️
+## Limitations ⚠️
 
 1. A class must contain at least 2 students to compute class reports.
 2. Class report can only be generated once.
@@ -27,13 +27,13 @@ etc. Then students for the newly created class should be added (minimum of 2).
 6. Students with the same score will have different class position.
 7. Students with the same subject score will have different position.
 
-# Starting the Server: Perquisites 💻
+## Starting the Server: Perquisites 💻
 
 1. Go installed.
 2. A database connection URL from mongodb.com
 
 
-# How to start the application server 🚀
+## How to start the application server 🚀
 
 1. Ensure the latest version of `go` is installed on your device. Visit
    https://go.dev/doc/install to install `go`.
@@ -46,4 +46,10 @@ etc. Then students for the newly created class should be added (minimum of 2).
 
 4. Visit `localhost:PORT` to view the Graphql playground.
 
-Click [HERE](https://www.postman.com/fewchore-api/workspace/meg/collection/668324efe630760afe868062?action=share&source=copy-link&creator=9797704) to visit API documentation.
+## Documentation
+
+Graphql Playground: https://scomp.onrender.com/
+
+OR
+
+Visit the [API Documentation on Postman](https://www.postman.com/fewchore-api/workspace/meg/collection/668324efe630760afe868062?action=share&source=copy-link&creator=9797704)
