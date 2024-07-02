@@ -18,7 +18,7 @@ const usernameKey = "username"
 
 type Admin struct {
 	ID             string `json:"_id" bson:"_id"`
-	Username       string `json:"username" bson:"password"`
+	Username       string `json:"username" bson:"username"`
 	HashedPassword string `json:"hashedPassword" bson:"hashedPassword"`
 	CreatedAt      int64  `json:"createdAt" bson:"createdAt"`
 }
@@ -64,6 +64,7 @@ func (ar *AdminRepository) CreateAccount(username, password string) (string, err
 	}
 
 	adminInfo := &Admin{
+		ID:             primitive.NewObjectID().Hex(),
 		Username:       username,
 		HashedPassword: string(passwordHash),
 		CreatedAt:      time.Now().Unix(),
@@ -77,7 +78,7 @@ func (ar *AdminRepository) CreateAccount(username, password string) (string, err
 		return "", fmt.Errorf("adminCollection.InsertOne error: %w", err)
 	}
 
-	return res.InsertedID.(primitive.ObjectID).Hex(), nil
+	return res.InsertedID.(string), nil
 }
 
 // LoginAccount implements Repository.

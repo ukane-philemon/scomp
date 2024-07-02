@@ -1,3 +1,50 @@
+# Class would be replaced by autobind.
+type Class {
+  _id: String!
+  name: String!
+  # subjects: [Subject!]! Not linked.
+  report: ClassReport!
+  createdAt: String!
+  lastUpdatedAt: String!
+}
+
+type ClassReport {
+  totalStudents: Int!
+  highestStudentScore: Int!
+  highestStudentScoreAsPercentage: String!
+  lowestStudentScore: Int!
+  lowestStudentScoreAsPercentage: String!
+  generatedAt: String!
+}
+
+# Student would be replaced by autobind.
+type Student {
+  _id: String!
+  name: String!
+  classID: String!
+  report: Report!
+  createdAt: String!
+}
+
+type Report {
+  class: StudentClassReport!
+  subjects: [SubjectReport!]!
+}
+
+type StudentClassReport {
+  grade: String!
+  position: Int!
+  totalScore: Int!
+  totalScorePercentage: String!
+}
+
+
+type SubjectReport {
+  name: String!
+  score: Int!
+  grade: String!
+  position: Int!
+}
 
 type AuthenticatedAdmin {
   id: String!
@@ -5,19 +52,9 @@ type AuthenticatedAdmin {
   authToken: String!
 }
 
-# Class is a type holder and would be replaced by autobind.
-type Class {
-  name: String!
-}
-
-# Student isa type holder and would be replaced by autobind.
-type Student {
-  name: String!
-}
-
 type CompleteClassInfo {
   class: Class!
-  students: [Student]!
+  students: [Student!]!
 }
 
 input SubjectScore {

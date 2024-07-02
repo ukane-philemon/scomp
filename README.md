@@ -9,8 +9,8 @@ subjects.
 3. Create a class.
 4. Add a student record to an existing class.
 5. Compute class report.
-6. Query class record
-7. Query student record
+6. Query class record.
+7. Query student record.
 8. Query all existing classes.
 
 # Limitations ⚠️
@@ -22,8 +22,10 @@ subjects.
 4. To use this service for the same class with another set of students, classes
 should be created with names formatted like `ClassName Year`, e.g `JSS1 2024`
 etc. Then students for the newly created class should be added (minimum of 2).
-5. Admin would need to request for `classReport` in intervals. e.g every 10
-   minutes. This is because report computation is done asynchronously.
+5. Admin would need to request for class `report` after a delay. This is because
+   report computation is done asynchronously.
+6. Students with the same score will have different class position.
+7. Students with the same subject score will have different position.
 
 # Starting the Server: Perquisites 💻
 
@@ -43,3 +45,5 @@ etc. Then students for the newly created class should be added (minimum of 2).
 3. Lastly, run `go build` to build the executable and then run `./scomp --dev {remove --dev for production}` to start the HTTP server.
 
 4. Visit `localhost:PORT` to view the Graphql playground.
+
+Click [HERE](https://www.postman.com/fewchore-api/workspace/meg/collection/668324efe630760afe868062?action=share&source=copy-link&creator=9797704) to visit API documentation.

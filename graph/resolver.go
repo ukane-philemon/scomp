@@ -1,9 +1,12 @@
 package graph
 
 import (
+	"fmt"
 	"log"
 	"sort"
+	"strconv"
 	"sync"
+	"time"
 
 	"github.com/ukane-philemon/scomp/internal/admin"
 	"github.com/ukane-philemon/scomp/internal/auth"
@@ -14,11 +17,10 @@ import (
 type Resolver struct {
 	wg sync.WaitGroup
 
-	// Repositories
-	AdminRepo   admin.Repository
-	ClassRepo   class.Repository
-	StudentRepo student.Repository
-	AuthRepo    auth.Repository
+	AdminRepository          admin.Repository
+	ClassRepository          class.Repository
+	StudentRepository        student.Repository
+	AuthenticationRepository auth.Repository
 }
 
 // Wait waits for all pending asynchronous activities to finish.
@@ -39,11 +41,6 @@ type subjectScoreInfo struct {
 type studentReport struct {
 	studentID string
 	report    *student.Report
-}
-
-type subjectReport struct {
-	score    int
-	position int
 }
 
 // computeClassReport generates a report for a class. studentsInfo is a map of
@@ -76,9 +73,9 @@ func (r *Resolver) computeClassReport(classID string, classSubjects []*class.Sub
 		}
 
 		report := &student.Report{
-			Class: &student.ClassReport{
+			Class: &student.StudentClassReport{
 				TotalScore:           totalScore,
-				TotalScorePercentage: float64(totalScore/totalMaxSubjectsScore) * 100,
+				TotalScorePercentage: fmt.Sprintf("%.1f", float64(totalScore)/float64(totalMaxSubjectsScore)*100),
 			},
 		}
 
@@ -89,10 +86,7 @@ func (r *Resolver) computeClassReport(classID string, classSubjects []*class.Sub
 		})
 	}
 
-	// subjectReportMap is a map of subject names to subject reports
-	// and is used to enure students with the same subject score get the same
-	// position.
-	subjectReportMap := make(map[string]*subjectReport, 0)
+	nowUnix := time.Now().Unix()
 
 	// Set student subject position an grade them.
 	for subjectName, subject := range subjectScoreMap {
@@ -103,23 +97,14 @@ func (r *Resolver) computeClassReport(classID string, classSubjects []*class.Sub
 
 		// Set student position and grade them.
 		for positionIndex, report := range subject.studentScores {
-			sr, found := subjectReportMap[subjectName]
-			if !found || sr.score != report.score {
-				sr = &subjectReport{
-					score:    report.score,
-					position: positionIndex + 1,
-				}
-				subjectReportMap[subjectName] = sr
-			}
-
-			subjectScorePercentage := float64(sr.score/subject.maxScore) * 100
+			subjectScorePercentage := float64(report.score) / float64(subject.maxScore) * 100
 			studentReportMap[report.studentID].Subjects = append(studentReportMap[report.studentID].Subjects, &student.SubjectReport{
 				SubjectScore: &student.SubjectScore{
 					Name:  subjectName,
-					Score: sr.score,
+					Score: report.score,
 				},
-				Grade:    gradeTotalScorePercentage(subjectScorePercentage),
-				Position: sr.position,
+				Grade:    gradeTotalScorePercentage(fmt.Sprint(subjectScorePercentage)),
+				Position: positionIndex + 1,
 			})
 		}
 	}
@@ -133,45 +118,39 @@ func (r *Resolver) computeClassReport(classID string, classSubjects []*class.Sub
 		TotalStudents: len(studentReports),
 	}
 
-	// classPositionMap is a map of student total scores to a student position
-	// and is used to ensure students with the same total scores get the same
-	// position
-	classPositionMap := make(map[int]int)
-
 	// Set student position and grade them.
 	for positionIndex, record := range studentReports {
 		report := record.report.Class
-		studentPosition, foundScore := classPositionMap[report.TotalScore]
-		if !foundScore {
-			studentPosition = positionIndex + 1
-			classPositionMap[report.TotalScore] = studentPosition
+		studentPosition := positionIndex + 1
+
+		if report.TotalScore > classReport.HighestStudentScore {
+			classReport.HighestStudentScore = report.TotalScore
+		} else if classReport.LowestStudentScore == 0 || report.TotalScore < classReport.LowestStudentScore {
+			classReport.LowestStudentScore = report.TotalScore
 		}
 
 		studentReportMap[record.studentID].Class.Position = studentPosition
 		studentReportMap[record.studentID].Class.Grade = gradeTotalScorePercentage(report.TotalScorePercentage)
-
-		if report.TotalScore > classReport.HighestStudentScore {
-			classReport.HighestStudentScore = report.TotalScore
-		} else if report.TotalScore < classReport.LowestStudentScore {
-			classReport.LowestStudentScore = report.TotalScore
-		}
+		studentReportMap[record.studentID].GeneratedAt = fmt.Sprint(nowUnix)
 	}
 
-	classReport.HighestStudentScoreAsPercentage = float64(classReport.HighestStudentScore/totalMaxSubjectsScore) * 100
-	classReport.LowestStudentScoreAsPercentage = float64(classReport.LowestStudentScore/totalMaxSubjectsScore) * 100
+	classReport.HighestStudentScoreAsPercentage = fmt.Sprintf("%.1f", float64(classReport.HighestStudentScore)/float64(totalMaxSubjectsScore)*100)
+	classReport.LowestStudentScoreAsPercentage = fmt.Sprintf("%1.f", float64(classReport.LowestStudentScore)/float64(totalMaxSubjectsScore)*100)
+	classReport.GeneratedAt = fmt.Sprint(nowUnix)
 
-	err := r.ClassRepo.SaveClassReport(classID, classReport)
+	err := r.ClassRepository.SaveClassReport(classID, classReport)
 	if err != nil {
-		log.Printf("\nSERVER ERROR: ClassRepo.SaveClassReport %v", err.Error())
+		log.Printf("SERVER ERROR: ClassRepo.SaveClassReport %v", err.Error())
 	}
 
-	err = r.StudentRepo.SaveStudentReports(studentReportMap)
+	err = r.StudentRepository.SaveStudentReports(studentReportMap)
 	if err != nil {
-		log.Printf("\nSERVER ERROR: StudentRepo.SaveStudentReports %v", err.Error())
+		log.Printf("SERVER ERROR: StudentRepo.SaveStudentReports %v", err.Error())
 	}
 }
 
-func gradeTotalScorePercentage(totalStudentScorePercentage float64) string {
+func gradeTotalScorePercentage(totalStudentScorePercentageStr string) string {
+	totalStudentScorePercentage, _ := strconv.ParseFloat(totalStudentScorePercentageStr, 64)
 	switch {
 	case totalStudentScorePercentage > 69:
 		return "Excellent"

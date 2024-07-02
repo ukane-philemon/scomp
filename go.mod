@@ -11,8 +11,11 @@ require (
 	golang.org/x/crypto v0.24.0
 )
 
+require github.com/cespare/xxhash/v2 v2.1.2 // indirect
+
 require (
 	github.com/agnivade/levenshtein v1.1.1 // indirect
+	github.com/go-chi/httprate v0.9.0
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect

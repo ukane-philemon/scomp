@@ -18,21 +18,22 @@ import (
 
 // CreateAdminAccount is the resolver for the createAdminAccount field.
 func (r *mutationResolver) CreateAdminAccount(ctx context.Context, username string, password string) (string, error) {
-	adminID, err := r.AdminRepo.CreateAccount(username, password)
+	adminID, err := r.AdminRepository.CreateAccount(username, password)
 	if err != nil {
 		return "", handleError(err)
 	}
+
 	return adminID, nil
 }
 
 // Login is the resolver for the login field.
 func (r *mutationResolver) Login(ctx context.Context, username string, password string) (*model.AuthenticatedAdmin, error) {
-	adminID, err := r.AdminRepo.CreateAccount(username, password)
+	adminID, err := r.AdminRepository.LoginAccount(username, password)
 	if err != nil {
 		return nil, handleError(err)
 	}
 
-	authToken, err := r.AuthRepo.GenerateToken(adminID)
+	authToken, err := r.AuthenticationRepository.GenerateToken(adminID)
 	if err != nil {
 		return nil, handleError(err)
 	}
@@ -50,7 +51,7 @@ func (r *mutationResolver) CreateClass(ctx context.Context, className string, su
 		return "", &customerror.ErrorUnauthorized{}
 	}
 
-	classID, err := r.ClassRepo.Create(className, subjects)
+	classID, err := r.ClassRepository.Create(className, subjects)
 	if err != nil {
 		return "", handleError(err)
 	}
@@ -65,13 +66,17 @@ func (r *mutationResolver) AddStudentRecord(ctx context.Context, classID string,
 	}
 
 	// Ensure classID is valid.
-	class, err := r.ClassRepo.Class(classID)
+	class, err := r.ClassRepository.Class(classID)
 	if err != nil {
 		return "", handleError(err)
 	}
 
 	if len(subjectScores) != len(class.Subjects) {
 		return "", fmt.Errorf("%w: %d class subjects are required to save a student's record", db.ErrorInvalidRequest, len(class.Subjects))
+	}
+
+	if class.Report != nil {
+		return "", fmt.Errorf("%w: class already has a report, new students cannot be added", db.ErrorInvalidRequest)
 	}
 
 	subjectMaxScores := make(map[string]int, len(class.Subjects))
@@ -82,20 +87,20 @@ func (r *mutationResolver) AddStudentRecord(ctx context.Context, classID string,
 	for _, subject := range subjectScores {
 		maxSubjectScore, found := subjectMaxScores[subject.Name]
 		if !found {
-			return "", fmt.Errorf("%w: subject name %s does not exist, check spelling as subject names are case sensitive.",
+			return "", fmt.Errorf("%w: subject name %s does not exist, check spelling as subject names are case sensitive",
 				db.ErrorInvalidRequest, subject.Name)
 		}
 
-		if subject.Score > maxSubjectScore {
-			return "", fmt.Errorf("%w: student score (%d) for subject %s exceeds the maximum score (%d) for this subject",
+		if subject.Score > maxSubjectScore || subject.Score < 0 {
+			return "", fmt.Errorf("%w: invalid student score (%d) for subject %s (maximum score is %d)",
 				db.ErrorInvalidRequest, subject.Score, subject.Name, maxSubjectScore)
 		}
 	}
 
 	// Create student.
-	studentID, err := r.StudentRepo.Create(classID, studentName, subjectScores)
+	studentID, err := r.StudentRepository.Create(classID, studentName, subjectScores)
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 
 	return studentID, nil
@@ -107,13 +112,13 @@ func (r *mutationResolver) ComputeClassReport(ctx context.Context, classID strin
 		return "", &customerror.ErrorUnauthorized{}
 	}
 
-	class, err := r.ClassRepo.Class(classID)
+	class, err := r.ClassRepository.Class(classID)
 	if err != nil {
 		return "", handleError(err)
 	}
 
 	// Retrieve student record for this class.
-	studentScores, err := r.StudentRepo.StudentScores(classID)
+	studentScores, err := r.StudentRepository.StudentScores(classID)
 	if err != nil {
 		return "", handleError(err)
 	}
@@ -139,13 +144,13 @@ func (r *queryResolver) ClassInfo(ctx context.Context, classID string) (*model.C
 		return nil, &customerror.ErrorUnauthorized{}
 	}
 
-	class, err := r.ClassRepo.Class(classID)
+	class, err := r.ClassRepository.Class(classID)
 	if err != nil {
 		return nil, handleError(err)
 	}
 
 	// Retrieve student record for this class.
-	classStudents, err := r.StudentRepo.Students(classID)
+	classStudents, err := r.StudentRepository.Students(classID)
 	if err != nil {
 		return nil, handleError(err)
 	}
@@ -162,7 +167,7 @@ func (r *queryResolver) Classes(ctx context.Context, hasReport *bool) ([]*model.
 		return nil, &customerror.ErrorUnauthorized{}
 	}
 
-	classes, err := r.ClassRepo.Classes(hasReport)
+	classes, err := r.ClassRepository.Classes(hasReport)
 	if err != nil {
 		return nil, handleError(err)
 	}
@@ -170,7 +175,7 @@ func (r *queryResolver) Classes(ctx context.Context, hasReport *bool) ([]*model.
 	var completeClassInfo []*model.CompleteClassInfo
 	for _, class := range classes {
 		// Retrieve student record for this class.
-		classStudents, err := r.StudentRepo.Students(class.ID)
+		classStudents, err := r.StudentRepository.Students(class.ID)
 		if err != nil {
 			return nil, handleError(err)
 		}
@@ -190,7 +195,7 @@ func (r *queryResolver) Student(ctx context.Context, classID string, studentID s
 		return nil, &customerror.ErrorUnauthorized{}
 	}
 
-	student, err := r.StudentRepo.Student(classID, studentID)
+	student, err := r.StudentRepository.Student(classID, studentID)
 	if err != nil {
 		return nil, handleError(err)
 	}
@@ -204,7 +209,7 @@ func (r *queryResolver) Students(ctx context.Context, classID string) ([]*studen
 		return nil, &customerror.ErrorUnauthorized{}
 	}
 
-	classExists, err := r.ClassRepo.Exists(classID)
+	classExists, err := r.ClassRepository.Exists(classID)
 	if err != nil {
 		return nil, handleError(err)
 	}
@@ -214,7 +219,7 @@ func (r *queryResolver) Students(ctx context.Context, classID string) ([]*studen
 	}
 
 	// Retrieve student record for this class.
-	classStudents, err := r.StudentRepo.Students(classID)
+	classStudents, err := r.StudentRepository.Students(classID)
 	if err != nil {
 		return nil, handleError(err)
 	}

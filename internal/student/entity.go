@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/ukane-philemon/scomp/internal/db"
 	"go.mongodb.org/mongo-driver/bson"
@@ -20,22 +21,24 @@ const (
 )
 
 type Student struct {
-	ID      string  `json:"_id" bson:"_id"`
-	Name    string  `json:"name" bson:"name"`
-	ClassID string  `json:"classID" bson:"classID"`
-	Report  *Report `json:"report" bson:"report"`
+	ID        string  `json:"_id" bson:"_id"`
+	Name      string  `json:"name" bson:"name"`
+	ClassID   string  `json:"classID" bson:"classID"`
+	Report    *Report `json:"report" bson:"report"`
+	CreatedAt string  `json:"createdAt" bson:"createdAt"`
 }
 
 type Report struct {
-	Subjects []*SubjectReport `json:"subjects" bson:"subjects"`
-	Class    *ClassReport     `json:"class" bson:"class"`
+	Subjects    []*SubjectReport    `json:"subjects" bson:"subjects"`
+	Class       *StudentClassReport `json:"class" bson:"class"`
+	GeneratedAt string              `json:"generatedAt" bson:"generatedAt"`
 }
 
-type ClassReport struct {
-	Position             int     `json:"position" bson:"position"`
-	Grade                string  `json:"grade" bson:"grade"`
-	TotalScore           int     `json:"totalScore" bson:"totalScore"`
-	TotalScorePercentage float64 `json:"totalScorePercentage" bson:"totalScorePercentage"`
+type StudentClassReport struct {
+	Position             int    `json:"position" bson:"position"`
+	Grade                string `json:"grade" bson:"grade"`
+	TotalScore           int    `json:"totalScore" bson:"totalScore"`
+	TotalScorePercentage string `json:"totalScorePercentage" bson:"totalScorePercentage"`
 }
 
 type SubjectReport struct {
@@ -94,9 +97,11 @@ func (sr *StudentRepository) Create(classID string, studentName string, subjectS
 	}
 
 	student := &Student{
-		Name:    nameKey,
-		ClassID: classID,
-		Report:  new(Report),
+		ID:        primitive.NewObjectID().Hex(),
+		Name:      studentName,
+		ClassID:   classID,
+		Report:    new(Report),
+		CreatedAt: fmt.Sprint(time.Now().Unix()),
 	}
 
 	for index, subject := range subjectScores {
@@ -119,7 +124,7 @@ func (sr *StudentRepository) Create(classID string, studentName string, subjectS
 		return "", fmt.Errorf("studentCollection.InsertOne error: %w", err)
 	}
 
-	return res.InsertedID.(primitive.ObjectID).Hex(), nil
+	return res.InsertedID.(string), nil
 }
 
 // Student returns the students that match provided arguments.
@@ -129,15 +134,9 @@ func (sr *StudentRepository) Student(classID string, studentID string) (*Student
 		return nil, fmt.Errorf("%w: missing required argument(s)", db.ErrorInvalidRequest)
 	}
 
-	dbStudentID, err := primitive.ObjectIDFromHex(studentID)
-	if err != nil {
-		return nil, fmt.Errorf("%w: invalid studentID %s", db.ErrorInvalidRequest, studentID)
-	}
-
-	studentFilter := bson.M{idKey: dbStudentID, classIDKey: classID}
-
 	var student *Student
-	err = sr.studentCollection.FindOne(sr.ctx, studentFilter).Decode(&student)
+	studentFilter := bson.M{idKey: studentID, classIDKey: classID}
+	err := sr.studentCollection.FindOne(sr.ctx, studentFilter).Decode(&student)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, fmt.Errorf("%w: no record found for student with ID %s", db.ErrorInvalidRequest, studentID)
@@ -161,7 +160,7 @@ func (sr *StudentRepository) Students(classID string) ([]*Student, error) {
 	}
 
 	var students []*Student
-	return nil, cur.All(sr.ctx, &students)
+	return students, cur.All(sr.ctx, &students)
 }
 
 // StudentScores returns a map of student ID to their subject scores.
@@ -209,12 +208,8 @@ func (sr *StudentRepository) SaveStudentReports(reports map[string]*Report) erro
 
 	saveStudentReportFn := func(ctx mongo.SessionContext) (interface{}, error) {
 		for studentID, report := range reports {
-			dbID, err := primitive.ObjectIDFromHex(studentID)
-			if err != nil {
-				return nil, fmt.Errorf("%w: invalid studentID %s", db.ErrorInvalidRequest, studentID)
-			}
-
-			res, err := sr.studentCollection.UpdateOne(ctx, bson.M{idKey: dbID}, bson.M{"$set": bson.M{reportKey: report}}, options.Update().SetUpsert(false))
+			update := bson.M{"$set": bson.M{reportKey: report}}
+			res, err := sr.studentCollection.UpdateOne(ctx, bson.M{idKey: studentID}, update, options.Update().SetUpsert(false))
 			if err != nil {
 				return nil, fmt.Errorf("studentCollection.UpdateOne error: %w", err)
 			}
