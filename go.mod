@@ -1,6 +1,6 @@
 module github.com/ukane-philemon/scomp
 
-go 1.22.4
+go 1.22.3
 
 require (
 	github.com/99designs/gqlgen v0.17.49
