@@ -15,6 +15,6 @@ func handleError(err error) error {
 		return err
 	}
 
-	log.Printf("\nSERVER ERROR: %v", err.Error())
+	log.Printf("SERVER ERROR: %v", err.Error())
 	return &customerror.ErrorUnknown{}
 }

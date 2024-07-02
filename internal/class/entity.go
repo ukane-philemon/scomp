@@ -23,7 +23,7 @@ type Class struct {
 	ID            string       `json:"_id" bson:"_id"`
 	Name          string       `json:"name" bson:"name"`
 	Subjects      []*Subject   `json:"subjects" bson:"subjects"`
-	ClassReport   *ClassReport `json:"classReport" bson:"report"` // nil until a report is generated
+	Report        *ClassReport `json:"report" bson:"report"` // nil until a report is generated
 	CreatedAt     string       `json:"createdAt" bson:"createdAt"`
 	LastUpdatedAt string       `json:"lastUpdatedAt" bson:"lastUpdatedAt"`
 }
@@ -34,12 +34,12 @@ type Subject struct {
 }
 
 type ClassReport struct {
-	TotalStudents                   int     `json:"totalStudents" bson:"totalStudents"`
-	HighestStudentScore             int     `json:"highestStudentScore" bson:"highestStudentScore"`
-	HighestStudentScoreAsPercentage float64 `json:"highestStudentScoreAsPercentage" bson:"highestStudentScoreAsPercentage"`
-	LowestStudentScore              int     `json:"lowestStudentScore" bson:"lowestStudentScore"`
-	LowestStudentScoreAsPercentage  float64 `json:"lowestStudentScoreAsPercentage" bson:"lowestStudentScoreAsPercentage"`
-	GeneratedAt                     int64   `json:"generatedAt" bson:"generatedAt"`
+	TotalStudents                   int    `json:"totalStudents" bson:"totalStudents"`
+	HighestStudentScore             int    `json:"highestStudentScore" bson:"highestStudentScore"`
+	HighestStudentScoreAsPercentage string `json:"highestStudentScoreAsPercentage" bson:"highestStudentScoreAsPercentage"`
+	LowestStudentScore              int    `json:"lowestStudentScore" bson:"lowestStudentScore"`
+	LowestStudentScoreAsPercentage  string `json:"lowestStudentScoreAsPercentage" bson:"lowestStudentScoreAsPercentage"`
+	GeneratedAt                     string `json:"generatedAt" bson:"generatedAt"`
 }
 
 type ClassRepository struct {
@@ -95,6 +95,7 @@ func (cr *ClassRepository) Create(className string, subjects []*Subject) (string
 
 	nowUnix := time.Now().Unix()
 	classInfo := &Class{
+		ID:            primitive.NewObjectID().Hex(),
 		Name:          className,
 		Subjects:      subjects,
 		CreatedAt:     fmt.Sprint(nowUnix),
@@ -109,7 +110,7 @@ func (cr *ClassRepository) Create(className string, subjects []*Subject) (string
 		return "", fmt.Errorf("classCollection.InsertOne error: %w", err)
 	}
 
-	return res.InsertedID.(primitive.ObjectID).Hex(), nil
+	return res.InsertedID.(string), nil
 }
 
 // Class returns information for the class that match the provided classID.
@@ -195,10 +196,5 @@ func classFilter(classID string) (bson.M, error) {
 		return nil, fmt.Errorf("%w: missing classID", db.ErrorInvalidRequest)
 	}
 
-	dbClassID, err := primitive.ObjectIDFromHex(classID)
-	if err != nil {
-		return nil, fmt.Errorf("%w: invalid classID %s", db.ErrorInvalidRequest, classID)
-	}
-
-	return bson.M{idKey: dbClassID}, nil
+	return bson.M{idKey: classID}, nil
 }
